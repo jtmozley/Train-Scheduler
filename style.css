@@ -19,3 +19,8 @@
   width: 75%;
   margin: 0 auto;
 }
+
+.container {
+  padding-left: 0;
+  padding-right: 0;
+}

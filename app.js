@@ -1,12 +1,12 @@
 //=======================================================
 //firebase
-const config = {
-  apiKey: "AIzaSyCJ4aKTy_Ue0nGKbhpGwXdcC8EiFN1HRQc",
-  authDomain: "timecard-group.firebaseapp.com",
-  databaseURL: "https://timecard-group.firebaseio.com",
-  projectId: "timecard-group",
-  storageBucket: "timecard-group.appspot.com",
-  messagingSenderId: "300610980754"
+var config = {
+  apiKey: "AIzaSyDSYusUjcxvdFzfy_dSzMh5quCVD-anvLM",
+  authDomain: "trainscheduler-c70a7.firebaseapp.com",
+  databaseURL: "https://trainscheduler-c70a7.firebaseio.com",
+  projectId: "trainscheduler-c70a7",
+  storageBucket: "trainscheduler-c70a7.appspot.com",
+  messagingSenderId: "992976683191"
 };
 //firebase initilization
 firebase.initializeApp(config);
@@ -14,21 +14,22 @@ firebase.initializeApp(config);
 var database = firebase.database();
 //=======================================================
 
+//receive train start time and frequency to calculate what time the next arrival
+//will be and how many minutes away it is
+
 $("#submit").click(function(event) {
   event.preventDefault();
-  let employee = $("#emp-name").val();
-  let role = $("#emp-role").val();
-  let rate = $("#emp-rate").val();
-  let month = $("#emp-stmonth").val();
-  let day = $("#emp-stday").val();
-  let year = $("#emp-styear").val();
-  let start = month.toString() + "/" + day.toString() + "/" + year.toString();
+
+  var name = $("#name").val();
+  var destination = $("#destination").val();
+  var firstTrain = $("#firstTrain").val();
+  var frequency = $("#frequency").val();
 
   database.ref().push({
-    employee: employee,
-    role: role,
-    startDate: start,
-    monthlyRate: rate
+    name: name,
+    destination: destination,
+    firstTrain: firstTrain,
+    frequency: frequency
   });
 });
 
@@ -36,21 +37,27 @@ database.ref().on(
   "child_added",
   function(snapshot) {
     console.log(snapshot.val());
-    var months = moment(snapshot.val().startDate, "MM/DD/YYYY");
-    let today = moment();
-    let difference = today.diff(months, "months");
-    var totalBilled = difference * snapshot.val().monthlyRate;
-
-    console.log(difference);
+    var minutesRaw = snapshot.val().frequency;
+    var min = moment(minutesRaw, "mm").format("m");
+    var nextRaw = snapshot.val().firstTrain;
+    var today = moment().format("hh:mm");
+    var frequency = snapshot.val().frequency;
+    var start = moment.utc(nextRaw, "hh:mm");
+    var end = moment.utc(today, "hh:mm");
+    var timeDifference = moment.duration(end.diff(start)) / 1000 / 60;
+    var minutesAway =
+      Math.ceil(timeDifference / frequency) * frequency - timeDifference;
+    var trainTime = moment(start)
+      .add(Math.ceil(timeDifference / frequency) * frequency, "minutes")
+      .format("hh:mm");
 
     $("tbody").append(`
         <tr>
-            <td id="employee-name">${snapshot.val().employee}</td>
-            <td id="role">${snapshot.val().role}</td>
-            <td id="start-date">${snapshot.val().startDate}</td>
-            <td id="months-worked">${difference}</td>
-            <td id="monthly-rate">${snapshot.val().monthlyRate}</td>
-            <td id="total-billed">${totalBilled}</td>
+            <td>${snapshot.val().name}</td>
+            <td>${snapshot.val().destination}</td>
+            <td>${min}</td>
+            <td id="start-date">${trainTime}</td>
+            <td id="new-time">${minutesAway}</td>
             <hr>
         </tr>
       `);
